@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from google import genai
 import pypdf
-from docx import Document
+import docx
 import os
 import json
 
@@ -44,10 +44,9 @@ def extract_text_from_file(file):
         for page in pdf_reader.pages:
             text += str(page.extract_text()) + "\n"
     elif file_type == "docx":
-        doc = Document(file)
+        doc = docx.Document(file)  # Updated to call docx.Document()
         for para in doc.paragraphs:
             text += para.text + "\n"
-    return text
 
 # 3. Process and Merge System
 if st.button("🚀 Process and Group All Data ⚡"):
