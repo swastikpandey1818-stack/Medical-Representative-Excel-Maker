@@ -3,6 +3,5 @@ pandas
 google 
 pypdf
 docx
-os 
-json
+
 
