@@ -92,7 +92,7 @@ if st.button("🚀 Process and Group All Data ⚡"):
             
             try:
                 response = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.5-flash",
                     contents=prompt,
                 )
                 clean_json = response.text.strip().replace("```json", "").replace("```", "")
