@@ -7,7 +7,7 @@ import os
 import json
 
 EXCEL_FILE = "mr_consolidated_data.xlsx"
-client = genai.Client(api_key="GEMINI")
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
 st.set_page_config(page_title="MR Multi-File AI Data Merger", layout="wide")
 st.title("📑 MR Multi-File AI Data Merger")
