@@ -2,6 +2,4 @@ streamlit
 pandas
 google-genai
 pypdf
-docx
-
-
+python-docx
