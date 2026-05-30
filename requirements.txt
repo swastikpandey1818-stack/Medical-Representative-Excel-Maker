@@ -1,6 +1,6 @@
 streamlit
 pandas
-google 
+google-genai
 pypdf
 docx
 
