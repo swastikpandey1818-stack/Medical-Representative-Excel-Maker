@@ -74,9 +74,9 @@ if st.button("🚀 Process and Group All Data ⚡"):
             except Exception as e:
                 st.error(f"Could not read spreadsheet {file.name}: {e}")
 
-    # Send data + custom instruction to Gemini
+     # Send data + custom instruction to Gemini
     if combined_raw_text.strip():
-        with st.spinner("AI is analyzing files..."):
+        with st.spinner("AI is analyzing files... (Applying automated server retry fallback if busy)"):
             
             prompt = f"""
             You are an expert medical representative data analyst. 
@@ -100,18 +100,36 @@ if st.button("🚀 Process and Group All Data ⚡"):
             Return ONLY raw valid JSON text code. No markdown boxes, no conversational dialogue.
             """
             
-            try:
-                # Updated to use the correct official 2026 Flash engine version string
-                response = client.models.generate_content(
-                    model="gemini-3.5-flash",
-                    contents=prompt,
-                )
-                clean_json = response.text.strip().replace("```json", "").replace("```", "")
-                ai_data = json.loads(clean_json)
-                all_extracted_records.extend(ai_data)
-            except Exception as e:
-                st.error("AI extraction failed on file text. Check formatting or API key.")
-                st.exception(e)
+            import time
+            response = None
+            max_retries = 3
+            
+            for attempt in range(max_retries):
+                try:
+                    # Explicitly targeting the high-availability stable flash model
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=prompt,
+                    )
+                    break # Success! Break out of the retry loop
+                except Exception as e:
+                    # Check if it is a 503 temporary overload error
+                    if "503" in str(e) and attempt < max_retries - 1:
+                        time.sleep(2) # Wait 2 seconds before trying again
+                        continue
+                    else:
+                        st.error("AI extraction failed on file text. Check server status or formatting.")
+                        st.exception(e)
+                        break
+
+            if response:
+                try:
+                    clean_json = response.text.strip().replace("```json", "").replace("```", "")
+                    ai_data = json.loads(clean_json)
+                    all_extracted_records.extend(ai_data)
+                except Exception as parse_error:
+                    st.error("Failed to parse AI output formatting.")
+                    st.exception(parse_error)
 
     # Compile everything into a primary DataFrame
     final_new_df = pd.DataFrame(all_extracted_records)
