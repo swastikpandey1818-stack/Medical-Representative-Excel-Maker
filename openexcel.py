@@ -3,7 +3,7 @@ import pandas as pd
 from google import genai
 import pypdf
 from docx import Document
-import openpyxl  # Added to explicitly force load the Excel engine
+import openpyxl  # Explicitly force load the Excel engine
 import os
 import json
 
@@ -79,16 +79,20 @@ if st.button("🚀 Process and Group All Data ⚡"):
         with st.spinner("AI is analyzing files..."):
             
             prompt = f"""
-            You are an automated data extraction script for a medical representative.
-            Extract all instances of medicines distributed, items sold, products pitched, and sample quantities into JSON format.
-            The response must be a valid JSON array of objects with exactly these keys:
-            "Doctor Name", "Product Pitched", "Quantity".
+            You are an expert medical representative data analyst. 
+            Your task is to extract data from the text and format it into a valid JSON array of objects with exactly these keys:
+            "Doctor Name", "Product Pitched", "Quantity"
             
-            CRITICAL EXTRA INSTRUCTION FROM THE USER (Focus on this):
+            Strict Rules for Extraction:
+            1. "Doctor Name": Search the text carefully for an actual clinician or doctor's name (e.g., look for titles like "Dr.", "Doctor", or clinical names). 
+               - CRITICAL: If there is NO doctor name explicitly mentioned in the text, do NOT use the shop/pharmacy name (like Divay Medical Store) here. Instead, set "Doctor Name" to "Direct Sale".
+            
+            2. "Product Pitched": Look for specific medicine names or items. If individual medicine names are completely missing and the table only shows financial logs, use the Invoice No. (e.g., "Invoice AGM0000933").
+            
+            3. "Quantity": If medicine quantities are mentioned, extract them. If this is a financial statement showing invoice amounts without specific stock quantities, extract the billing AMOUNT (Rs.) as the value. Ensure it is strictly a plain integer number.
+            
+            USER CUSTOM INSTRUCTION:
             {custom_recommendation}
-            
-            If a specific Doctor Name is missing or the text is structured purely as sales items, default "Doctor Name" to "Direct Sale / Pharmacy".
-            Ensure "Quantity" is strictly a plain integer number.
             
             Text Data to process:
             {combined_raw_text}
@@ -97,6 +101,7 @@ if st.button("🚀 Process and Group All Data ⚡"):
             """
             
             try:
+                # Updated to use the correct official 2026 Flash engine version string
                 response = client.models.generate_content(
                     model="gemini-3.5-flash",
                     contents=prompt,
@@ -105,7 +110,7 @@ if st.button("🚀 Process and Group All Data ⚡"):
                 ai_data = json.loads(clean_json)
                 all_extracted_records.extend(ai_data)
             except Exception as e:
-                st.error("AI extraction failed on file text. Check formatting.")
+                st.error("AI extraction failed on file text. Check formatting or API key.")
                 st.exception(e)
 
     # Compile everything into a primary DataFrame
@@ -141,8 +146,30 @@ if st.button("🚀 Process and Group All Data ⚡"):
         else:
             combined_master = consolidated_df
 
+        # Save the master tracking data
         combined_master.to_excel(EXCEL_FILE, index=False, engine='openpyxl')
-        st.success("Successfully processed all files and custom instructions!")
+        
+        # 🎨 AUTOMATIC EXCEL BOLDING LAYOUT
+        try:
+            from openpyxl.styles import Font
+            
+            wb = openpyxl.load_workbook(EXCEL_FILE)
+            ws = wb.active
+            bold_style = Font(bold=True)
+            
+            # Bold top column names row
+            for cell in ws[1]:
+                cell.font = bold_style
+                
+            # Bold every item in Column A (Doctor Name / Status column)
+            for row in range(2, ws.max_row + 1):
+                ws[f"A{row}"].font = bold_style
+                
+            wb.save(EXCEL_FILE)
+        except Exception as style_err:
+            st.warning(f"Spreadsheet saved successfully, but bold styling skipped: {style_err}")
+
+        st.success("Successfully processed all files and custom instructions with formatting!")
         st.dataframe(consolidated_df)
     else:
         st.warning("No data found to process.")
