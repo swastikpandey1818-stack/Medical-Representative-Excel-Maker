@@ -1,0 +1,8 @@
+streamlit
+pandas
+google 
+pypdf
+docx
+os 
+json
+
